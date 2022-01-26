@@ -1,12 +1,15 @@
 # k8s-AbsaOSS-spline
 
 ## set up ENVs
-export ARANGO_VERSION=1.2.6
+export ARANGO_VERSION=1.2.7
+
 export URLPREFIX=https://github.com/arangodb/kube-arangodb/releases/download/$ARANGO_VERSION
-export NAMESPACE=arangodb
+
+NAMESPACE=spline
 
 ### deploy arangodb-operator
-helm-charts % helm install kube-arangodb-crd $URLPREFIX/kube-arangodb-crd-$ARANGO_VERSION.tgz --create-namespace -n $NAMESPACE
+
+helm install kube-arangodb-crd $URLPREFIX/kube-arangodb-crd-$ARANGO_VERSION.tgz --create-namespace -n $NAMESPACE
 
 helm install kube-arangodb $URLPREFIX/kube-arangodb-$ARANGO_VERSION.tgz -n $NAMESPACE
 

@@ -3,7 +3,7 @@ registry: "docker.io"
 repository: "arangodb"
 tag: "3.8.4"
 
-mode: "Single"
+mode: "Cluster"
 environment: "Development"
 rootPassword: "Auto"
 
