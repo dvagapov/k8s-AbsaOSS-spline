@@ -1,0 +1,17 @@
+{{- if .Values.yourKitJavaProfiler.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-yourkit
+{{- if .Values.yourKitJavaProfiler.service.annotations }}
+  annotations:
+{{ toYaml .Values.yourKitJavaProfiler.service.annotations | indent 4 }}
+{{- end }}
+spec:
+  type: {{ .Values.yourKitJavaProfiler.service.type }}
+  selector:
+    app: {{ .Release.Name }}
+  ports:
+  - protocol: {{ .Values.yourKitJavaProfiler.service.portType }}
+    port: {{ .Values.yourKitJavaProfiler.service.port }}
+{{- end }}

@@ -1,0 +1,28 @@
+{{- if .Values.examples.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-agent-job
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  backoffLimit: 4
+  completions: 1
+  # ttlSecondsAfterFinished: 0
+  activeDeadlineSeconds: 1800
+  template:
+    spec:
+      containers:
+      - name: {{ .Release.Name }}
+        image: {{ .Values.examples.image }}:{{ .Values.examples.imageTag }}
+        env:
+          - name: MAVEN_OPTS
+            value: "-Xmx755m -XX:MaxPermSize=755m"
+          - name: SPLINE_PRODUCER_URL
+            value: "http://{{ .Release.Name }}:{{ .Values.service.port}}/producer"
+          - name: SPLINE_MODE
+            value: {{ .Values.examples.splineMode }}
+        resources:
+        {{- toYaml .Values.examples.resources | nindent 10 }}
+      restartPolicy: Never
+{{- end }}

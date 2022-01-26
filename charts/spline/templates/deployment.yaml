@@ -1,0 +1,162 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  annotations:
+  {{- if .Values.service.annotations }}
+{{ toYaml .Values.service.annotations | indent 4 }}
+  {{- end }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+        release: {{ .Release.Name }}
+      {{- if .Values.jmx.enabled }}
+        metrics: "jmx"
+      {{- with .Values.jmx.service.annotations }}
+      annotations:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- end }}
+    spec:
+      {{- if .Values.nodeSelector }}
+      nodeSelector:
+      {{ toYaml .Values.nodeSelector | indent 8 }}
+      {{- end }}
+      {{- if or .Values.init.enabled .Values.jmx.enabled .Values.updatedb.enabled .Values.yourKitJavaProfiler.enabled }}
+      initContainers:
+      {{- if .Values.init.enabled }}
+      - name: initdb
+        image: {{ .Values.init.image }}:{{ .Values.imageTag }}
+        args: 
+          - {{ .Values.init.cmd }}
+          - {{ .Values.arango.url }}/{{ .Values.arango.database }}
+          - {{ .Values.init.extraArgs }}
+      {{- end }}
+      {{- if .Values.updatedb.enabled }}
+      - name: updatedb
+        image: {{ .Values.updatedb.image }}:{{ .Values.imageTag }}
+        args: 
+          - {{ .Values.updatedb.cmd }}
+          - {{ .Values.arango.url }}/{{ .Values.arango.database }}
+      {{- end }}
+      {{- if .Values.jmx.enabled }}
+      - name: jmx-exporter-cp
+        image: "{{ .Values.jmx.image }}:{{ .Values.jmx.imageTag }}"
+        imagePullPolicy: {{ .Values.jmx.imagePullPolicy | quote }}
+        command:
+          - /bin/bash
+        args:
+          - -ec
+          - |
+            cp jmx_prometheus_javaagent.jar /jmx/jmx_prometheus_javaagent.jar
+            chmod +x /jmx/jmx_prometheus_javaagent.jar
+        volumeMounts:
+          - name: jmx-prometheus-javaagent
+            mountPath: /jmx
+      {{- end }}
+      {{- if .Values.yourKitJavaProfiler.enabled }}
+      - name: yourkit-cp
+        image: "{{ .Values.yourKitJavaProfiler.image }}:{{ .Values.yourKitJavaProfiler.imageTag }}"
+        imagePullPolicy: {{ .Values.yourKitJavaProfiler.imagePullPolicy | quote }}
+        command:
+          - /bin/bash
+        args:
+          - -ec
+          - |
+            curl -fsSL -k https://www.yourkit.com/download/{{ .Values.yourKitJavaProfiler.version }}.zip > /tmp/yjp.zip
+            unzip -o -d /tmp/ /tmp/yjp.zip
+            cp /tmp/{{ .Values.yourKitJavaProfiler.version }}/bin/linux-x86-64/libyjpagent.so /yourkit/
+            chmod 777 -R /yourkit/
+        volumeMounts:
+          - name: yourkit
+            mountPath: /yourkit
+      {{- end }}
+      {{- end }}
+      containers:
+      - name: {{ .Release.Name }}-deployment
+        image: {{ .Values.image }}:{{ .Values.imageTag }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        ports:
+          - containerPort: {{ .Values.service.port }}
+            protocol: {{ .Values.service.portType }}
+          {{- if .Values.jmx.enabled }}
+          - containerPort: {{ .Values.jmx.service.port }}
+            protocol: TCP
+            name: http-metrics
+          {{- end }}
+          {{- if .Values.yourKitJavaProfiler.enabled }}
+          - containerPort: {{ .Values.yourKitJavaProfiler.service.port }}
+            protocol: TCP
+            name: yourkit-metrics
+          {{- end }}
+        env:
+          - name: spline.database.connectionUrl
+            value: "{{ .Values.arango.url }}/{{ .Values.arango.database }}"
+          {{- if .Values.yourKitJavaProfiler.enabled }}
+          - name: JAVA_OPTS
+            value: "{{ .Values.JAVA_OPTS }} {{ .Values.yourKitJavaProfiler.JAVA_OPTS }}"
+          {{- else }}
+          - name: JAVA_OPTS
+            value: {{ .Values.JAVA_OPTS }}
+          {{- end }}
+          {{- if .Values.jmx.enabled }}
+          - name: CATALINA_OPTS
+            value: "-javaagent:/jmx/jmx_prometheus_javaagent.jar={{ .Values.jmx.service.port }}:/opt/jmx_exporter/tomcat.yml"
+          {{- end }}
+        {{- if .Values.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.livenessProbe.path }}
+            port: {{ .Values.service.port }}
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.readinessProbe.path }}
+            port: {{ .Values.service.port }}
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+        {{- end }}
+        resources:
+        {{- toYaml .Values.resources | nindent 10 }}
+        {{- if or .Values.yourKitJavaProfiler.enabled .Values.jmx.enabled }}
+        volumeMounts:
+          {{- if .Values.yourKitJavaProfiler.enabled }}
+          - name: yourkit
+            mountPath: /yourkit
+          {{- end }}
+          {{- if .Values.jmx.enabled }}
+          - name: jmx-files
+            mountPath: /opt/jmx_exporter/
+          - name: jmx-prometheus-javaagent
+            mountPath: /jmx
+          {{- end }}
+        {{- end }}
+      {{- if or .Values.yourKitJavaProfiler.enabled .Values.jmx.enabled }}
+      volumes:
+        {{- if .Values.yourKitJavaProfiler.enabled }}
+        - name: yourkit
+          emptyDir: {}
+        {{- end }}
+        {{- if .Values.jmx.enabled }}
+        - name: jmx-files
+          configMap:
+            name: {{ .Chart.Name }}-jmx-files
+        - name: jmx-prometheus-javaagent
+          emptyDir: {}
+        {{- end }}
+      {{- end }}

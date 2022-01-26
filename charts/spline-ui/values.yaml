@@ -1,0 +1,58 @@
+image: "absaoss/spline-web-ui"
+imageTag: "0.7.3"
+
+#IfNotPresent #Always
+imagePullPolicy: IfNotPresent
+
+replicaCount: 1
+
+annotations: {}
+nodeSelector: {}
+
+splineConsumerUrl: "https://spline-api.example.com/consumer"
+
+service:
+  type: "ClusterIP"
+  port: 8080
+  portType: TCP
+  annotations: {}
+
+ingress:
+  enabled: true
+  host: "spline.example.com"
+  path: "/"
+  ingressClass: "nginx"
+  clusterIssuer: "cert-manager-issuer"
+
+livenessProbe:
+  enabled: true
+  path: "/app/assets/config.json"
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+  successThreshold: 1
+
+readinessProbe:
+  enabled: true
+  path: "/app/assets/config.json"
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+  successThreshold: 1
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  cpuAverageUtilization: 50
+  memoryAverageUtilization: 70

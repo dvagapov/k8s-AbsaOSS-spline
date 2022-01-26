@@ -1,0 +1,11 @@
+{{- if .Values.jmx.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-jmx-files
+  labels:
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+binaryData:
+{{ (.Files.Glob "jmx_prometheus/*").AsSecrets | indent 2 }}
+{{- end }}
