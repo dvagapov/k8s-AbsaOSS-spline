@@ -10,7 +10,7 @@
 
 ### deploy arangodb-operator
 
-    elm install kube-arangodb-crd $URLPREFIX/kube-arangodb-crd-$ARANGO_VERSION.tgz --create-namespace -n $NAMESPACE
+    helm install kube-arangodb-crd $URLPREFIX/kube-arangodb-crd-$ARANGO_VERSION.tgz --create-namespace -n $NAMESPACE
 
     helm install kube-arangodb $URLPREFIX/kube-arangodb-$ARANGO_VERSION.tgz -n $NAMESPACE
 
