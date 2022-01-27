@@ -14,12 +14,22 @@ helm install kube-arangodb-crd $URLPREFIX/kube-arangodb-crd-$ARANGO_VERSION.tgz 
 helm install kube-arangodb $URLPREFIX/kube-arangodb-$ARANGO_VERSION.tgz -n $NAMESPACE
 
 ### check deployments
+
 kubectl get all -n $NAMESPACE
 
 ### deploy arangodb-cluster
+
 helm upgrade --install arangodb charts/arangodb --set auth.password=MySuperStrongPassword -n $NAMESPACE
 
 ### deploy Spline and Spline-UI
+
 helm install spline charts/spline --set ingress.host="spline-api.example.com" --set arango.url="arangodb://root:MySuperStrongPassword@arangodb:8529" --set examples.enabled=true -n $NAMESPACE
 
 helm install spline-ui charts/spline-ui --set ingress.host="spline-api.example.com" --set splineConsumerUrl="https://spline:8080/consumer" -n $NAMESPACE
+
+
+# port-forward Spline Web pages
+
+kubectl port-forward svc/spline 9000:8080 -n $NAMESPACE
+
+kubectl port-forward svc/spline-ui 8000:8080 -n $NAMESPACE
