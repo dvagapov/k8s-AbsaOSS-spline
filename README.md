@@ -1,17 +1,18 @@
 # k8s-AbsaOSS-spline
 
-## set up ENVs
-export ARANGO_VERSION=1.2.7
+### set up ENVs
 
-export URLPREFIX=https://github.com/arangodb/kube-arangodb/releases/download/$ARANGO_VERSION
+    ARANGO_VERSION=1.2.7
 
-NAMESPACE=spline
+    URLPREFIX=https://github.com/arangodb/kube-arangodb/releases/download/$ARANGO_VERSION
+
+    NAMESPACE=spline
 
 ### deploy arangodb-operator
 
-helm install kube-arangodb-crd $URLPREFIX/kube-arangodb-crd-$ARANGO_VERSION.tgz --create-namespace -n $NAMESPACE
+    elm install kube-arangodb-crd $URLPREFIX/kube-arangodb-crd-$ARANGO_VERSION.tgz --create-namespace -n $NAMESPACE
 
-helm install kube-arangodb $URLPREFIX/kube-arangodb-$ARANGO_VERSION.tgz -n $NAMESPACE
+    helm install kube-arangodb $URLPREFIX/kube-arangodb-$ARANGO_VERSION.tgz -n $NAMESPACE
 
 ### check deployments
 
@@ -28,7 +29,7 @@ helm install kube-arangodb $URLPREFIX/kube-arangodb-$ARANGO_VERSION.tgz -n $NAME
     helm install spline-ui charts/spline-ui --set ingress.host="spline-api.example.com" --set splineConsumerUrl="https://spline:8080/consumer" -n $NAMESPACE
 
 
-# port-forward Spline Web pages
+### port-forward Spline Web pages
 
     kubectl port-forward svc/spline 9000:8080 -n $NAMESPACE
 
